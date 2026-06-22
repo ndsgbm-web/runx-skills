@@ -1,0 +1,130 @@
+skill: meeting-prep
+version: "0.1.0"
+
+catalog:
+  kind: skill
+  audience: operator
+  visibility: public
+  role: context
+harness:
+  cases:
+    - name: meeting-prep-launch-decision
+      inputs:
+        event:
+          title: "Q3 launch decision sync"
+          starts_at: "2026-07-08T14:00:00Z"
+          duration_minutes: 45
+          organizer: "operator@example.com"
+          location: "https://meet.example.com/launch-q3"
+          description: "Decide whether to ship the v2 launch on July 18 or push to August."
+        attendee_notes:
+          - attendee: "design-partner@example.com"
+            role: "External design partner"
+            recent_focus: "Reviewed the v2 onboarding flow last week"
+            open_threads:
+              - "Asked for one more round on the empty-state copy"
+          - attendee: "eng-lead@example.com"
+            role: "Engineering lead"
+            recent_focus: "Cut scope to land the July 18 date"
+            open_threads:
+              - "Wants explicit sign-off from sales before locking the date"
+        prior_thread_snippets:
+          - source: "thread-launch-decision"
+            summary: "Sales wants the launch to coincide with the partner enablement week; eng needs at least 7 working days after the final review."
+        public_links:
+          - url: "https://example.com/launch-checklist"
+            why_included: "Current shipping checklist with open items."
+        objective: "Reach a yes/no decision on the July 18 launch date and assign owners for the remaining checklist items."
+      caller:
+        answers:
+          agent_task.meeting-prep.output:
+            meeting_summary:
+              goal: "Decide whether to ship the v2 launch on July 18 or push to August, and assign owners for the remaining checklist."
+              organizer: "operator@example.com"
+              duration: "45 minutes"
+            attendee_briefs:
+              - attendee: "design-partner@example.com"
+                role: "External design partner"
+                remember: "Has an open ask on the empty-state copy; v2 onboarding was reviewed last week."
+              - attendee: "eng-lead@example.com"
+                role: "Engineering lead"
+                remember: "Cut scope to land July 18; wants sales sign-off before locking the date."
+            agenda:
+              - item: "Confirm sales-side commitment to the July 18 window"
+                source_ref: "prior_thread_snippets.thread-launch-decision"
+              - item: "Review remaining checklist items and assign owners"
+                source_ref: "public_links.0"
+              - item: "Resolve the empty-state copy ask with the design partner"
+                source_ref: "attendee_notes.0.open_threads.0"
+            decisions_to_make:
+              - decision: "Ship on July 18, August 1, or hold"
+                owner: "operator"
+              - decision: "Lock the public launch checklist owners"
+                owner: "operator + eng-lead"
+            key_topics:
+              - "Sales enablement week alignment"
+              - "Engineering freeze date and remaining work"
+              - "Design partner's last open ask"
+            risks_and_open_questions:
+              - "No sales commitment in the supplied snippets; operator should confirm before the meeting."
+              - "If the empty-state copy slips, the July 18 date is at risk."
+            follow_up_actions:
+              - action: "Draft the decision email to eng-lead and design partner"
+                pre_send: true
+              - action: "Update the public launch checklist with new owners"
+                pre_send: true
+            verdict: ready
+      expect:
+        status: sealed
+        receipt:
+          schema: runx.receipt.v1
+
+    - name: meeting-prep-needs-context
+      inputs:
+        event:
+          title: "Sync"
+        objective: "Be useful in this meeting."
+      expect:
+        status: needs_agent
+
+runners:
+  brief:
+    default: true
+    type: agent-task
+    agent: operator
+    task: meeting-prep
+    outputs:
+      meeting_summary: object
+      attendee_briefs: array
+      agenda: array
+      decisions_to_make: array
+      key_topics: array
+      risks_and_open_questions: array
+      follow_up_actions: array
+      verdict: string
+    artifacts:
+      wrap_as: meeting_prep_brief
+      packet: runx.ops.meeting_prep_brief.v1
+    runx:
+      category: ops
+    inputs:
+      event:
+        type: json
+        required: true
+        description: "Redacted calendar event payload."
+      attendee_notes:
+        type: json
+        required: false
+        description: "Per-attendee notes the operator has already gathered."
+      prior_thread_snippets:
+        type: json
+        required: false
+        description: "Redacted snippets of relevant conversations or decision logs."
+      public_links:
+        type: json
+        required: false
+        description: "Redacted public URLs the operator wants the brief to consider."
+      objective:
+        type: string
+        required: false
+        description: "What the operator wants to achieve from the meeting."
